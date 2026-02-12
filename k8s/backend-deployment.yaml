@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quiz-backend
+  labels:
+    app: quiz-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: quiz-backend
+  template:
+    metadata:
+      labels:
+        app: quiz-backend
+    spec:
+      containers:
+        - name: backend
+          image: vinchar/quiz-backend:latest
+          ports:
+            - containerPort: 3001
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: quiz-backend
+  ports:
+    - port: 3001
+      targetPort: 3001
+  type: ClusterIP
