@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ai-quiz-generator.fullname" . }}-frontend
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  type: {{ .Values.service.frontend.type }}
+  ports:
+    - port: {{ .Values.service.frontend.port }}
+      targetPort: {{ .Values.service.frontend.port }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ include "ai-quiz-generator.name" . }}
+    app.kubernetes.io/component: frontend

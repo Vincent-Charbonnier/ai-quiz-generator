@@ -1,0 +1,21 @@
+Thank you for installing the ai-quiz-generator chart!
+
+This chart deploys two components:
+  - frontend (nginx) on port 80
+  - backend (Express) on port 3001
+
+IMPORTANT:
+The frontend image proxies API requests to http://backend:3001.
+Keep the backend service name as "backend" (values.yaml) unless you rebuild the frontend image.
+
+Install the chart:
+  helm install ai-quiz-generator ./ai-quiz-generator
+
+To upgrade with new values:
+  helm upgrade --install ai-quiz-generator ./ai-quiz-generator -f my-values.yaml
+
+If using Istio, ensure your gateway in values (ezua.virtualService.istioGateway) is correct.
+
+For local testing via port-forward:
+  kubectl port-forward svc/$(kubectl get svc -l app.kubernetes.io/name=ai-quiz-generator -o jsonpath='{.items[0].metadata.name}') 8080:80
+

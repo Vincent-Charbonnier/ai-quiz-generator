@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.backend.name }}
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  type: {{ .Values.service.backend.type }}
+  ports:
+    - port: {{ .Values.service.backend.port }}
+      targetPort: {{ .Values.service.backend.port }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ include "ai-quiz-generator.name" . }}
+    app.kubernetes.io/component: backend

@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-quiz-generator.fullname" . }}-backend
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.replicaCount.backend }}
+  selector:
+    matchLabels:
+      app: {{ include "ai-quiz-generator.name" . }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app: {{ include "ai-quiz-generator.name" . }}
+        app.kubernetes.io/component: backend
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: backend
+          image: "{{ .Values.image.backend.repository }}:{{ .Values.image.backend.tag }}"
+          imagePullPolicy: {{ .Values.image.backend.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.backend.port }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.backend.path | quote }}
+              port: {{ .Values.service.backend.port }}
+            initialDelaySeconds: {{ .Values.readinessProbe.backend.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.backend.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.backend.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.backend.failureThreshold }}
+            successThreshold: {{ .Values.readinessProbe.backend.successThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.backend.path | quote }}
+              port: {{ .Values.service.backend.port }}
+            initialDelaySeconds: {{ .Values.livenessProbe.backend.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.backend.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.backend.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.backend.failureThreshold }}
+            successThreshold: {{ .Values.livenessProbe.backend.successThreshold }}
+          resources:
+            {{- toYaml .Values.resources.backend | nindent 12 }}

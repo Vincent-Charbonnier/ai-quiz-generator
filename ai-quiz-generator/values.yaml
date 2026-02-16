@@ -1,0 +1,85 @@
+replicaCount:
+  frontend: 1
+  backend: 1
+
+image:
+  frontend:
+    repository: vinchar/ai-quiz-generator-frontend
+    tag: "0.1"
+    pullPolicy: IfNotPresent
+  backend:
+    repository: vinchar/ai-quiz-generator-backend
+    tag: "0.1"
+    pullPolicy: IfNotPresent
+
+service:
+  frontend:
+    type: ClusterIP
+    port: 80
+  backend:
+    # IMPORTANT: nginx in the frontend image proxies to http://backend:3001
+    # Keep this name as "backend" unless you rebuild the frontend image.
+    name: backend
+    type: ClusterIP
+    port: 3001
+
+resources:
+  frontend:
+    limits: {}
+    requests: {}
+  backend:
+    limits: {}
+    requests: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+readinessProbe:
+  frontend:
+    path: "/"
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  backend:
+    path: "/api/generate"
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+livenessProbe:
+  frontend:
+    path: "/"
+    initialDelaySeconds: 30
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  backend:
+    path: "/api/generate"
+    initialDelaySeconds: 30
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 60
+
+ingress:
+  enabled: false
+  host: ai-quiz.example.com
+  annotations: {}
+
+ezua:
+  virtualService:
+    endpoint: "ai-quiz.${DOMAIN_NAME}"
+    domain: "${DOMAIN_NAME}"
+    istioGateway: "istio-system/ezaf-gateway"

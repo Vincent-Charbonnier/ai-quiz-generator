@@ -1,0 +1,24 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ include "ai-quiz-generator.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  gateways:
+    - {{ .Values.ezua.virtualService.istioGateway }}
+  hosts:
+    - {{ .Values.ezua.virtualService.endpoint }}
+  http:
+    - match:
+        - uri:
+            prefix: /
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: {{ include "ai-quiz-generator.fullname" . }}-frontend.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.service.frontend.port }}
