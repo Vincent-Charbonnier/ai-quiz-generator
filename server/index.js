@@ -5,6 +5,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint for K8s probes
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 app.post("/api/generate", async (req, res) => {
   const { endpoint, apiKey, model, systemPrompt, userPrompt } = req.body;
 

@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   frontend:
+    image: vinchar/quiz-frontend:latest
     build:
       context: .
       dockerfile: Dockerfile.frontend
@@ -11,6 +12,7 @@ services:
       - backend
 
   backend:
+    image: vinchar/quiz-backend:latest
     build:
       context: .
       dockerfile: Dockerfile.backend
