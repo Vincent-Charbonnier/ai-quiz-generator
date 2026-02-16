@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 import requests
 import chromadb
+from chromadb.config import Settings
 from fastapi import FastAPI, HTTPException
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Chroma
@@ -32,12 +33,12 @@ DO NOT wrap the JSON in backticks.
 DO NOT include newlines before or after the JSON.
 
 Each element MUST have exactly this structure:
-{
+{{
   "id": number,
   "question": string,
   "options": [string, string, string, string],
   "correctIndex": number
-}
+}}
 
 Rules:
 - Generate exactly {n} questions.
@@ -148,11 +149,12 @@ def _build_vectorstore(
         port = parsed.port or (443 if parsed.scheme == "https" else 80)
         ssl = parsed.scheme == "https"
         ssl_verify = os.getenv("RAG_CHROMA_SSL_VERIFY", "true").lower() != "false"
+        settings = Settings(chroma_server_ssl_verify=ssl_verify)
         client = chromadb.HttpClient(
             host=host,
             port=port,
             ssl=ssl,
-            ssl_verify=ssl_verify,
+            settings=settings,
         )
         vectorstore = Chroma(
             collection_name=collection_name,
@@ -198,9 +200,19 @@ def _extract_num_questions(user_prompt: str, default_n: int = 5) -> int:
     return int(match.group(1))
 
 
+def _normalize_llm_endpoint(endpoint: str) -> str:
+    endpoint = (endpoint or "").rstrip("/")
+    if endpoint.endswith("/chat/completions"):
+        return endpoint
+    if endpoint.endswith("/v1"):
+        return f"{endpoint}/chat/completions"
+    return f"{endpoint}/v1/chat/completions"
+
+
 def _call_llm(endpoint: str, token: str, model: str, system_prompt: str, user_prompt: str) -> str:
     if not endpoint:
         raise HTTPException(status_code=400, detail="llm.endpoint is required")
+    endpoint = _normalize_llm_endpoint(endpoint)
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"

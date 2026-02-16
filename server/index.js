@@ -79,6 +79,7 @@ app.post("/api/generate", upload.array("files"), async (req, res) => {
 
     if (!response.ok) {
       const text = await response.text();
+      console.error("RAG error:", response.status, text);
       return res.status(response.status).json({ error: text });
     }
 

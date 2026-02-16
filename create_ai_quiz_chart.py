@@ -107,7 +107,7 @@ readinessProbe:
     failureThreshold: 3
     successThreshold: 1
   backend:
-    path: "/api/generate"
+    path: "/health"
     initialDelaySeconds: 5
     periodSeconds: 10
     timeoutSeconds: 5
@@ -130,7 +130,7 @@ livenessProbe:
     failureThreshold: 3
     successThreshold: 1
   backend:
-    path: "/api/generate"
+    path: "/health"
     initialDelaySeconds: 30
     periodSeconds: 20
     timeoutSeconds: 5

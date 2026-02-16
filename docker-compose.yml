@@ -32,6 +32,12 @@ services:
     environment:
       RAG_CHROMA_URL: "https://chroma-db.pcaidev.ai.greendatacenter.com"
       RAG_CHROMA_SSL_VERIFY: "false"
+      RAG_EMBEDDING_ENDPOINT: "${RAG_EMBEDDING_ENDPOINT}"
+      RAG_EMBEDDING_TOKEN: "${RAG_EMBEDDING_TOKEN}"
+      RAG_EMBEDDING_MODEL: "${RAG_EMBEDDING_MODEL}"
+      RAG_LLM_ENDPOINT: "${RAG_LLM_ENDPOINT}"
+      RAG_LLM_TOKEN: "${RAG_LLM_TOKEN}"
+      RAG_LLM_MODEL: "${RAG_LLM_MODEL}"
     volumes:
       - rag_chroma:/data/chroma
 
