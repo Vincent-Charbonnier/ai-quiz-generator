@@ -11,28 +11,56 @@ app.get("/health", (req, res) => {
 });
 
 app.post("/api/generate", async (req, res) => {
-  const { endpoint, apiKey, model, systemPrompt, userPrompt } = req.body;
-
-  if (!endpoint) {
-    return res.status(400).json({ error: "endpoint is required" });
-  }
+  const {
+    endpoint,
+    apiKey,
+    model,
+    systemPrompt,
+    userPrompt,
+    pdfUrl,
+    pdfPath,
+    embeddingEndpoint,
+    embeddingToken,
+    embeddingModel,
+    llmEndpoint,
+    llmToken,
+    llmModel,
+    chunkSize,
+    chunkOverlap,
+    topK,
+  } = req.body;
 
   try {
-    const headers = { "Content-Type": "application/json" };
-    if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+    const ragUrl = process.env.RAG_URL || "http://rag:8000/chat/completions";
 
     const body = {
-      model: model || "default",
+      model: llmModel || model || "default",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.7,
+      rag: {
+        pdf_url: pdfUrl || process.env.RAG_PDF_URL || "",
+        pdf_path: pdfPath || process.env.RAG_PDF_PATH || "",
+        embedding: {
+          endpoint: embeddingEndpoint || process.env.RAG_EMBEDDING_ENDPOINT || "",
+          token: embeddingToken || process.env.RAG_EMBEDDING_TOKEN || "",
+          model: embeddingModel || process.env.RAG_EMBEDDING_MODEL || "",
+        },
+        llm: {
+          endpoint: llmEndpoint || endpoint || process.env.RAG_LLM_ENDPOINT || "",
+          token: llmToken || apiKey || process.env.RAG_LLM_TOKEN || "",
+          model: llmModel || model || process.env.RAG_LLM_MODEL || "default",
+        },
+        chunk_size: chunkSize,
+        chunk_overlap: chunkOverlap,
+        top_k: topK,
+      },
     };
 
-    const response = await fetch(endpoint, {
+    const response = await fetch(ragUrl, {
       method: "POST",
-      headers,
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 

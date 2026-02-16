@@ -29,6 +29,17 @@ const Index = () => {
           model: config.model,
           systemPrompt: SYSTEM_PROMPT,
           userPrompt: `Generate exactly ${config.numQuestions} multiple-choice questions.`,
+          pdfUrl: config.pdfUrl,
+          pdfPath: config.pdfPath,
+          embeddingEndpoint: config.embeddingEndpoint,
+          embeddingToken: config.embeddingToken,
+          embeddingModel: config.embeddingModel,
+          llmEndpoint: config.llmEndpoint,
+          llmToken: config.llmToken,
+          llmModel: config.llmModel,
+          chunkSize: config.chunkSize,
+          chunkOverlap: config.chunkOverlap,
+          topK: config.topK,
         }),
       });
 

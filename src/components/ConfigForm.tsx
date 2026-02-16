@@ -14,12 +14,38 @@ interface ConfigFormProps {
 }
 
 const ConfigForm = ({ onGenerate, loading }: ConfigFormProps) => {
-  const [endpoint, setEndpoint] = useState("http://localhost:11434/v1/chat/completions");
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [pdfPath, setPdfPath] = useState("");
+  const [embeddingEndpoint, setEmbeddingEndpoint] = useState("");
+  const [embeddingToken, setEmbeddingToken] = useState("");
+  const [embeddingModel, setEmbeddingModel] = useState("nvidia/nv-embedqa-e5-v5");
+  const [llmEndpoint, setLlmEndpoint] = useState("");
+  const [llmToken, setLlmToken] = useState("");
+  const [llmModel, setLlmModel] = useState("openai/gpt-oss-120b");
+  const [chunkSize, setChunkSize] = useState(512);
+  const [chunkOverlap, setChunkOverlap] = useState(64);
+  const [topK, setTopK] = useState(6);
   const [numQuestions, setNumQuestions] = useState(5);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onGenerate({ endpoint, apiKey: "", model: "default", numQuestions });
+    onGenerate({
+      endpoint: llmEndpoint,
+      apiKey: llmToken,
+      model: llmModel,
+      numQuestions,
+      pdfUrl,
+      pdfPath,
+      embeddingEndpoint,
+      embeddingToken,
+      embeddingModel,
+      llmEndpoint,
+      llmToken,
+      llmModel,
+      chunkSize,
+      chunkOverlap,
+      topK,
+    });
   };
 
   return (
@@ -38,12 +64,84 @@ const ConfigForm = ({ onGenerate, loading }: ConfigFormProps) => {
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80">
               <div className="space-y-2">
-                <Label htmlFor="endpoint">API Endpoint</Label>
+                <Label htmlFor="pdfUrl">PDF URL</Label>
                 <Input
-                  id="endpoint"
-                  placeholder="http://localhost:11434/v1/chat/completions"
-                  value={endpoint}
-                  onChange={(e) => setEndpoint(e.target.value)}
+                  id="pdfUrl"
+                  placeholder="https://example.com/document.pdf"
+                  value={pdfUrl}
+                  onChange={(e) => setPdfUrl(e.target.value)}
+                />
+                <Label htmlFor="pdfPath">PDF Path (server)</Label>
+                <Input
+                  id="pdfPath"
+                  placeholder="/data/docs/document.pdf"
+                  value={pdfPath}
+                  onChange={(e) => setPdfPath(e.target.value)}
+                />
+                <Label htmlFor="embeddingEndpoint">Embedding Endpoint</Label>
+                <Input
+                  id="embeddingEndpoint"
+                  placeholder="https://.../v1"
+                  value={embeddingEndpoint}
+                  onChange={(e) => setEmbeddingEndpoint(e.target.value)}
+                />
+                <Label htmlFor="embeddingToken">Embedding Token</Label>
+                <Input
+                  id="embeddingToken"
+                  type="password"
+                  placeholder="token"
+                  value={embeddingToken}
+                  onChange={(e) => setEmbeddingToken(e.target.value)}
+                />
+                <Label htmlFor="embeddingModel">Embedding Model</Label>
+                <Input
+                  id="embeddingModel"
+                  placeholder="nvidia/nv-embedqa-e5-v5"
+                  value={embeddingModel}
+                  onChange={(e) => setEmbeddingModel(e.target.value)}
+                />
+                <Label htmlFor="llmEndpoint">LLM Endpoint</Label>
+                <Input
+                  id="llmEndpoint"
+                  placeholder="https://.../v1"
+                  value={llmEndpoint}
+                  onChange={(e) => setLlmEndpoint(e.target.value)}
+                />
+                <Label htmlFor="llmToken">LLM Token</Label>
+                <Input
+                  id="llmToken"
+                  type="password"
+                  placeholder="token"
+                  value={llmToken}
+                  onChange={(e) => setLlmToken(e.target.value)}
+                />
+                <Label htmlFor="llmModel">LLM Model</Label>
+                <Input
+                  id="llmModel"
+                  placeholder="openai/gpt-oss-120b"
+                  value={llmModel}
+                  onChange={(e) => setLlmModel(e.target.value)}
+                />
+                <Label htmlFor="chunkSize">Chunk Size</Label>
+                <Input
+                  id="chunkSize"
+                  type="number"
+                  value={chunkSize}
+                  onChange={(e) => setChunkSize(Number(e.target.value))}
+                />
+                <Label htmlFor="chunkOverlap">Chunk Overlap</Label>
+                <Input
+                  id="chunkOverlap"
+                  type="number"
+                  value={chunkOverlap}
+                  onChange={(e) => setChunkOverlap(Number(e.target.value))}
+                />
+                <Label htmlFor="topK">Top K</Label>
+                <Input
+                  id="topK"
+                  type="number"
+                  value={topK}
+                  onChange={(e) => setTopK(Number(e.target.value))}
                 />
               </div>
             </PopoverContent>

@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   frontend:
-    image: vinchar/quiz-frontend:latest
+    image: vinchar/ai-quiz-generator-frontend:0.1
     build:
       context: .
       dockerfile: Dockerfile.frontend
@@ -10,11 +10,22 @@ services:
       - "8080:80"
     depends_on:
       - backend
+      - rag
 
   backend:
-    image: vinchar/quiz-backend:latest
+    image: vinchar/ai-quiz-generator-backend:0.1
     build:
       context: .
       dockerfile: Dockerfile.backend
     ports:
       - "3001:3001"
+    depends_on:
+      - rag
+
+  rag:
+    image: vinchar/ai-quiz-generator-rag:0.1
+    build:
+      context: .
+      dockerfile: Dockerfile.rag
+    ports:
+      - "8000:8000"

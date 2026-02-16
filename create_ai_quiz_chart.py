@@ -22,7 +22,7 @@ print("Writing Chart.yaml...")
 chart_yaml = f"""\
 apiVersion: v2
 name: {chart_name}
-description: Helm chart for vinchar/ai-quiz-generator (frontend + backend)
+description: Helm chart for vinchar/ai-quiz-generator (frontend + backend + rag)
 type: application
 version: {chart_version}
 appVersion: "{chart_version}"
@@ -38,6 +38,7 @@ values_yaml = """\
 replicaCount:
   frontend: 1
   backend: 1
+  rag: 1
 
 image:
   frontend:
@@ -46,6 +47,10 @@ image:
     pullPolicy: IfNotPresent
   backend:
     repository: vinchar/ai-quiz-generator-backend
+    tag: "0.1"
+    pullPolicy: IfNotPresent
+  rag:
+    repository: vinchar/ai-quiz-generator-rag
     tag: "0.1"
     pullPolicy: IfNotPresent
 
@@ -59,12 +64,32 @@ service:
     name: backend
     type: ClusterIP
     port: 3001
+  rag:
+    name: rag
+    type: ClusterIP
+    port: 8000
+
+ragConfig:
+  pdfUrl: ""
+  pdfPath: ""
+  embeddingEndpoint: ""
+  embeddingToken: ""
+  embeddingModel: "nvidia/nv-embedqa-e5-v5"
+  llmEndpoint: ""
+  llmToken: ""
+  llmModel: "openai/gpt-oss-120b"
+  chunkSize: 512
+  chunkOverlap: 64
+  topK: 6
 
 resources:
   frontend:
     limits: {}
     requests: {}
   backend:
+    limits: {}
+    requests: {}
+  rag:
     limits: {}
     requests: {}
 
@@ -87,6 +112,13 @@ readinessProbe:
     timeoutSeconds: 5
     failureThreshold: 3
     successThreshold: 1
+  rag:
+    path: "/healthz"
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
 
 livenessProbe:
   frontend:
@@ -98,6 +130,13 @@ livenessProbe:
     successThreshold: 1
   backend:
     path: "/api/generate"
+    initialDelaySeconds: 30
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  rag:
+    path: "/healthz"
     initialDelaySeconds: 30
     periodSeconds: 20
     timeoutSeconds: 5
@@ -232,6 +271,31 @@ spec:
           imagePullPolicy: {{ .Values.image.backend.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.backend.port }}
+          env:
+            - name: RAG_URL
+              value: "http://{{ .Values.service.rag.name }}:{{ .Values.service.rag.port }}/chat/completions"
+            - name: RAG_PDF_URL
+              value: "{{ .Values.ragConfig.pdfUrl }}"
+            - name: RAG_PDF_PATH
+              value: "{{ .Values.ragConfig.pdfPath }}"
+            - name: RAG_EMBEDDING_ENDPOINT
+              value: "{{ .Values.ragConfig.embeddingEndpoint }}"
+            - name: RAG_EMBEDDING_TOKEN
+              value: "{{ .Values.ragConfig.embeddingToken }}"
+            - name: RAG_EMBEDDING_MODEL
+              value: "{{ .Values.ragConfig.embeddingModel }}"
+            - name: RAG_LLM_ENDPOINT
+              value: "{{ .Values.ragConfig.llmEndpoint }}"
+            - name: RAG_LLM_TOKEN
+              value: "{{ .Values.ragConfig.llmToken }}"
+            - name: RAG_LLM_MODEL
+              value: "{{ .Values.ragConfig.llmModel }}"
+            - name: RAG_CHUNK_SIZE
+              value: "{{ .Values.ragConfig.chunkSize }}"
+            - name: RAG_CHUNK_OVERLAP
+              value: "{{ .Values.ragConfig.chunkOverlap }}"
+            - name: RAG_TOP_K
+              value: "{{ .Values.ragConfig.topK }}"
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.backend.path | quote }}
@@ -255,6 +319,95 @@ spec:
 """
 with open(os.path.join(templates_dir, "backend-deployment.yaml"), "w") as f:
     f.write(backend_deployment_yaml)
+
+# ---------------------------
+# RAG Deployment
+# ---------------------------
+print("Writing rag-deployment.yaml...")
+rag_deployment_yaml = """\
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-quiz-generator.fullname" . }}-rag
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rag
+spec:
+  replicas: {{ .Values.replicaCount.rag }}
+  selector:
+    matchLabels:
+      app: {{ include "ai-quiz-generator.name" . }}
+      app.kubernetes.io/component: rag
+  template:
+    metadata:
+      labels:
+        app: {{ include "ai-quiz-generator.name" . }}
+        app.kubernetes.io/component: rag
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: rag
+          image: "{{ .Values.image.rag.repository }}:{{ .Values.image.rag.tag }}"
+          imagePullPolicy: {{ .Values.image.rag.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.rag.port }}
+          env:
+            - name: RAG_PDF_URL
+              value: "{{ .Values.ragConfig.pdfUrl }}"
+            - name: RAG_PDF_PATH
+              value: "{{ .Values.ragConfig.pdfPath }}"
+            - name: RAG_EMBEDDING_ENDPOINT
+              value: "{{ .Values.ragConfig.embeddingEndpoint }}"
+            - name: RAG_EMBEDDING_TOKEN
+              value: "{{ .Values.ragConfig.embeddingToken }}"
+            - name: RAG_EMBEDDING_MODEL
+              value: "{{ .Values.ragConfig.embeddingModel }}"
+            - name: RAG_LLM_ENDPOINT
+              value: "{{ .Values.ragConfig.llmEndpoint }}"
+            - name: RAG_LLM_TOKEN
+              value: "{{ .Values.ragConfig.llmToken }}"
+            - name: RAG_LLM_MODEL
+              value: "{{ .Values.ragConfig.llmModel }}"
+            - name: RAG_CHUNK_SIZE
+              value: "{{ .Values.ragConfig.chunkSize }}"
+            - name: RAG_CHUNK_OVERLAP
+              value: "{{ .Values.ragConfig.chunkOverlap }}"
+            - name: RAG_TOP_K
+              value: "{{ .Values.ragConfig.topK }}"
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.rag.path | quote }}
+              port: {{ .Values.service.rag.port }}
+            initialDelaySeconds: {{ .Values.readinessProbe.rag.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.rag.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.rag.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.rag.failureThreshold }}
+            successThreshold: {{ .Values.readinessProbe.rag.successThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.rag.path | quote }}
+              port: {{ .Values.service.rag.port }}
+            initialDelaySeconds: {{ .Values.livenessProbe.rag.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.rag.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.rag.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.rag.failureThreshold }}
+            successThreshold: {{ .Values.livenessProbe.rag.successThreshold }}
+          resources:
+            {{- toYaml .Values.resources.rag | nindent 12 }}
+"""
+with open(os.path.join(templates_dir, "rag-deployment.yaml"), "w") as f:
+    f.write(rag_deployment_yaml)
 
 # ---------------------------
 # Frontend Service
@@ -307,6 +460,32 @@ spec:
 """
 with open(os.path.join(templates_dir, "backend-service.yaml"), "w") as f:
     f.write(backend_service_yaml)
+
+# ---------------------------
+# RAG Service
+# ---------------------------
+print("Writing rag-service.yaml...")
+rag_service_yaml = """\
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.service.rag.name }}
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rag
+spec:
+  type: {{ .Values.service.rag.type }}
+  ports:
+    - port: {{ .Values.service.rag.port }}
+      targetPort: {{ .Values.service.rag.port }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ include "ai-quiz-generator.name" . }}
+    app.kubernetes.io/component: rag
+"""
+with open(os.path.join(templates_dir, "rag-service.yaml"), "w") as f:
+    f.write(rag_service_yaml)
 
 # ---------------------------
 # HorizontalPodAutoscaler (optional)
@@ -377,13 +556,16 @@ print("Writing NOTES.txt...")
 notes_txt = """\
 Thank you for installing the ai-quiz-generator chart!
 
-This chart deploys two components:
+This chart deploys three components:
   - frontend (nginx) on port 80
   - backend (Express) on port 3001
+  - rag (FastAPI) on port 8000
 
 IMPORTANT:
 The frontend image proxies API requests to http://backend:3001.
 Keep the backend service name as "backend" (values.yaml) unless you rebuild the frontend image.
+The backend calls the RAG service at http://rag:8000/chat/completions.
+Keep the rag service name as "rag" unless you change RAG_URL.
 
 Install the chart:
   helm install ai-quiz-generator ./ai-quiz-generator
