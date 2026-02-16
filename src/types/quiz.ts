@@ -3,8 +3,7 @@ export interface QuizConfig {
   apiKey?: string;
   model?: string;
   numQuestions: number;
-  pdfUrl?: string;
-  pdfPath?: string;
+  pdfFiles?: File[];
   embeddingEndpoint?: string;
   embeddingToken?: string;
   embeddingModel?: string;

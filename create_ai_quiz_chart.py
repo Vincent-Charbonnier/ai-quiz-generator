@@ -71,7 +71,6 @@ service:
 
 ragConfig:
   pdfUrl: ""
-  pdfPath: ""
   embeddingEndpoint: ""
   embeddingToken: ""
   embeddingModel: "nvidia/nv-embedqa-e5-v5"
@@ -81,6 +80,8 @@ ragConfig:
   chunkSize: 512
   chunkOverlap: 64
   topK: 6
+  chromaUrl: ""
+  chromaSslVerify: "true"
 
 resources:
   frontend:
@@ -276,8 +277,6 @@ spec:
               value: "http://{{ .Values.service.rag.name }}:{{ .Values.service.rag.port }}/chat/completions"
             - name: RAG_PDF_URL
               value: "{{ .Values.ragConfig.pdfUrl }}"
-            - name: RAG_PDF_PATH
-              value: "{{ .Values.ragConfig.pdfPath }}"
             - name: RAG_EMBEDDING_ENDPOINT
               value: "{{ .Values.ragConfig.embeddingEndpoint }}"
             - name: RAG_EMBEDDING_TOKEN
@@ -296,6 +295,10 @@ spec:
               value: "{{ .Values.ragConfig.chunkOverlap }}"
             - name: RAG_TOP_K
               value: "{{ .Values.ragConfig.topK }}"
+            - name: RAG_CHROMA_URL
+              value: "{{ .Values.ragConfig.chromaUrl }}"
+            - name: RAG_CHROMA_SSL_VERIFY
+              value: "{{ .Values.ragConfig.chromaSslVerify }}"
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.backend.path | quote }}
@@ -365,8 +368,6 @@ spec:
           env:
             - name: RAG_PDF_URL
               value: "{{ .Values.ragConfig.pdfUrl }}"
-            - name: RAG_PDF_PATH
-              value: "{{ .Values.ragConfig.pdfPath }}"
             - name: RAG_EMBEDDING_ENDPOINT
               value: "{{ .Values.ragConfig.embeddingEndpoint }}"
             - name: RAG_EMBEDDING_TOKEN
@@ -385,6 +386,10 @@ spec:
               value: "{{ .Values.ragConfig.chunkOverlap }}"
             - name: RAG_TOP_K
               value: "{{ .Values.ragConfig.topK }}"
+            - name: RAG_CHROMA_URL
+              value: "{{ .Values.ragConfig.chromaUrl }}"
+            - name: RAG_CHROMA_SSL_VERIFY
+              value: "{{ .Values.ragConfig.chromaSslVerify }}"
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.rag.path | quote }}
@@ -566,6 +571,13 @@ The frontend image proxies API requests to http://backend:3001.
 Keep the backend service name as "backend" (values.yaml) unless you rebuild the frontend image.
 The backend calls the RAG service at http://rag:8000/chat/completions.
 Keep the rag service name as "rag" unless you change RAG_URL.
+
+PDF SOURCE:
+- For runtime uploads, users upload PDFs in the UI (recommended).
+- For fixed documents, set ragConfig.pdfUrl in values to a hosted PDF.
+CHROMA:
+- To use an external Chroma server, set ragConfig.chromaUrl (e.g. http://chroma-db.svc.cluster.local:8000).
+- Set ragConfig.chromaSslVerify to "false" if the server uses an untrusted certificate.
 
 Install the chart:
   helm install ai-quiz-generator ./ai-quiz-generator

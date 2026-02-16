@@ -14,8 +14,7 @@ interface ConfigFormProps {
 }
 
 const ConfigForm = ({ onGenerate, loading }: ConfigFormProps) => {
-  const [pdfUrl, setPdfUrl] = useState("");
-  const [pdfPath, setPdfPath] = useState("");
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
   const [embeddingEndpoint, setEmbeddingEndpoint] = useState("");
   const [embeddingToken, setEmbeddingToken] = useState("");
   const [embeddingModel, setEmbeddingModel] = useState("nvidia/nv-embedqa-e5-v5");
@@ -34,8 +33,7 @@ const ConfigForm = ({ onGenerate, loading }: ConfigFormProps) => {
       apiKey: llmToken,
       model: llmModel,
       numQuestions,
-      pdfUrl,
-      pdfPath,
+      pdfFiles,
       embeddingEndpoint,
       embeddingToken,
       embeddingModel,
@@ -64,19 +62,13 @@ const ConfigForm = ({ onGenerate, loading }: ConfigFormProps) => {
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80">
               <div className="space-y-2">
-                <Label htmlFor="pdfUrl">PDF URL</Label>
+                <Label htmlFor="pdfFiles">Upload file(s)</Label>
                 <Input
-                  id="pdfUrl"
-                  placeholder="https://example.com/document.pdf"
-                  value={pdfUrl}
-                  onChange={(e) => setPdfUrl(e.target.value)}
-                />
-                <Label htmlFor="pdfPath">PDF Path (server)</Label>
-                <Input
-                  id="pdfPath"
-                  placeholder="/data/docs/document.pdf"
-                  value={pdfPath}
-                  onChange={(e) => setPdfPath(e.target.value)}
+                  id="pdfFiles"
+                  type="file"
+                  multiple
+                  accept="application/pdf"
+                  onChange={(e) => setPdfFiles(Array.from(e.target.files || []))}
                 />
                 <Label htmlFor="embeddingEndpoint">Embedding Endpoint</Label>
                 <Input

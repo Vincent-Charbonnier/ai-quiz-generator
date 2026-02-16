@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ai-quiz-generator.fullname" . }}-rag
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rag
+spec:
+  replicas: {{ .Values.replicaCount.rag }}
+  selector:
+    matchLabels:
+      app: {{ include "ai-quiz-generator.name" . }}
+      app.kubernetes.io/component: rag
+  template:
+    metadata:
+      labels:
+        app: {{ include "ai-quiz-generator.name" . }}
+        app.kubernetes.io/component: rag
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: rag
+          image: "{{ .Values.image.rag.repository }}:{{ .Values.image.rag.tag }}"
+          imagePullPolicy: {{ .Values.image.rag.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.rag.port }}
+          env:
+            - name: RAG_PDF_URL
+              value: "{{ .Values.ragConfig.pdfUrl }}"
+            - name: RAG_EMBEDDING_ENDPOINT
+              value: "{{ .Values.ragConfig.embeddingEndpoint }}"
+            - name: RAG_EMBEDDING_TOKEN
+              value: "{{ .Values.ragConfig.embeddingToken }}"
+            - name: RAG_EMBEDDING_MODEL
+              value: "{{ .Values.ragConfig.embeddingModel }}"
+            - name: RAG_LLM_ENDPOINT
+              value: "{{ .Values.ragConfig.llmEndpoint }}"
+            - name: RAG_LLM_TOKEN
+              value: "{{ .Values.ragConfig.llmToken }}"
+            - name: RAG_LLM_MODEL
+              value: "{{ .Values.ragConfig.llmModel }}"
+            - name: RAG_CHUNK_SIZE
+              value: "{{ .Values.ragConfig.chunkSize }}"
+            - name: RAG_CHUNK_OVERLAP
+              value: "{{ .Values.ragConfig.chunkOverlap }}"
+            - name: RAG_TOP_K
+              value: "{{ .Values.ragConfig.topK }}"
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.rag.path | quote }}
+              port: {{ .Values.service.rag.port }}
+            initialDelaySeconds: {{ .Values.readinessProbe.rag.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.rag.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.rag.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.rag.failureThreshold }}
+            successThreshold: {{ .Values.readinessProbe.rag.successThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.rag.path | quote }}
+              port: {{ .Values.service.rag.port }}
+            initialDelaySeconds: {{ .Values.livenessProbe.rag.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.rag.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.rag.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.rag.failureThreshold }}
+            successThreshold: {{ .Values.livenessProbe.rag.successThreshold }}
+          resources:
+            {{- toYaml .Values.resources.rag | nindent 12 }}

@@ -1,16 +1,19 @@
+import base64
 import hashlib
 import json
 import os
 import re
 import tempfile
+from urllib.parse import urlparse
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import requests
+import chromadb
 from fastapi import FastAPI, HTTPException
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
 
 app = FastAPI()
@@ -114,35 +117,67 @@ def _load_pdf_bytes(pdf_url: Optional[str], pdf_path: Optional[str]) -> bytes:
         if not path.exists():
             raise HTTPException(status_code=400, detail="pdf_path does not exist")
         return path.read_bytes()
-    raise HTTPException(status_code=400, detail="pdf_url or pdf_path is required")
+    raise HTTPException(status_code=400, detail="Upload PDF(s) or provide pdf_url")
+
+
+def _load_pdfs_from_payload(pdfs: list[dict[str, str]]) -> list[bytes]:
+    blobs = []
+    for item in pdfs:
+        b64 = item.get("content_b64", "")
+        if not b64:
+            continue
+        blobs.append(base64.b64decode(b64))
+    return blobs
 
 
 def _build_vectorstore(
-    pdf_bytes: bytes,
+    pdf_bytes_list: list[bytes],
     embeddings: Embeddings,
     persist_root: Path,
     chunk_size: int,
     chunk_overlap: int,
 ) -> Chroma:
-    doc_hash = _sha256_bytes(pdf_bytes)
-    persist_dir = persist_root / doc_hash
-    persist_dir.mkdir(parents=True, exist_ok=True)
+    combined = b"".join(pdf_bytes_list)
+    doc_hash = _sha256_bytes(combined)
+    collection_name = f"pdf-{doc_hash[:8]}"
 
-    vectorstore = Chroma(
-        collection_name=f"pdf-{doc_hash[:8]}",
-        embedding_function=embeddings,
-        persist_directory=str(persist_dir),
-    )
+    chroma_url = os.getenv("RAG_CHROMA_URL", "").strip()
+    if chroma_url:
+        parsed = urlparse(chroma_url)
+        host = parsed.hostname or chroma_url
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        ssl = parsed.scheme == "https"
+        ssl_verify = os.getenv("RAG_CHROMA_SSL_VERIFY", "true").lower() != "false"
+        client = chromadb.HttpClient(
+            host=host,
+            port=port,
+            ssl=ssl,
+            ssl_verify=ssl_verify,
+        )
+        vectorstore = Chroma(
+            collection_name=collection_name,
+            embedding_function=embeddings,
+            client=client,
+        )
+    else:
+        persist_dir = persist_root / doc_hash
+        persist_dir.mkdir(parents=True, exist_ok=True)
+        vectorstore = Chroma(
+            collection_name=collection_name,
+            embedding_function=embeddings,
+            persist_directory=str(persist_dir),
+        )
 
     if vectorstore._collection.count() > 0:
         return vectorstore
 
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-        tmp.write(pdf_bytes)
-        tmp_path = tmp.name
-
-    loader = PyPDFLoader(tmp_path)
-    documents = loader.load()
+    documents = []
+    for pdf_bytes in pdf_bytes_list:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(pdf_bytes)
+            tmp_path = tmp.name
+        loader = PyPDFLoader(tmp_path)
+        documents.extend(loader.load())
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
@@ -197,6 +232,7 @@ async def chat_completions(payload: Dict[str, Any]):
 
     pdf_url = rag.get("pdf_url") or os.getenv("RAG_PDF_URL", "")
     pdf_path = rag.get("pdf_path") or os.getenv("RAG_PDF_PATH", "")
+    pdfs_payload = rag.get("pdfs", []) or []
 
     embedding = rag.get("embedding", {}) or {}
     llm = rag.get("llm", {}) or {}
@@ -216,11 +252,13 @@ async def chat_completions(payload: Dict[str, Any]):
     if not embedding_endpoint or not embedding_model:
         raise HTTPException(status_code=400, detail="embedding.endpoint and embedding.model are required")
 
-    pdf_bytes = _load_pdf_bytes(pdf_url, pdf_path)
+    pdf_bytes_list = _load_pdfs_from_payload(pdfs_payload)
+    if not pdf_bytes_list:
+        pdf_bytes_list = [_load_pdf_bytes(pdf_url, pdf_path)]
     embeddings = NIMEmbedding(embedding_endpoint, embedding_token, embedding_model)
 
     persist_root = Path(os.getenv("RAG_CHROMA_DIR", "/data/chroma"))
-    vectorstore = _build_vectorstore(pdf_bytes, embeddings, persist_root, chunk_size, chunk_overlap)
+    vectorstore = _build_vectorstore(pdf_bytes_list, embeddings, persist_root, chunk_size, chunk_overlap)
 
     docs = vectorstore.similarity_search(user_msg or "quiz questions", k=top_k)
     context = "\n\n".join(d.page_content for d in docs)

@@ -1,12 +1,19 @@
 Thank you for installing the ai-quiz-generator chart!
 
-This chart deploys two components:
+This chart deploys three components:
   - frontend (nginx) on port 80
   - backend (Express) on port 3001
+  - rag (FastAPI) on port 8000
 
 IMPORTANT:
 The frontend image proxies API requests to http://backend:3001.
 Keep the backend service name as "backend" (values.yaml) unless you rebuild the frontend image.
+The backend calls the RAG service at http://rag:8000/chat/completions.
+Keep the rag service name as "rag" unless you change RAG_URL.
+
+PDF SOURCE:
+- For runtime uploads, users upload PDFs in the UI (recommended).
+- For fixed documents, set ragConfig.pdfUrl in values to a hosted PDF.
 
 Install the chart:
   helm install ai-quiz-generator ./ai-quiz-generator

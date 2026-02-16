@@ -1,16 +1,18 @@
 import express from "express";
 import cors from "cors";
+import multer from "multer";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Health check endpoint for K8s probes
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-app.post("/api/generate", async (req, res) => {
+app.post("/api/generate", upload.array("files"), async (req, res) => {
   const {
     endpoint,
     apiKey,
@@ -18,7 +20,6 @@ app.post("/api/generate", async (req, res) => {
     systemPrompt,
     userPrompt,
     pdfUrl,
-    pdfPath,
     embeddingEndpoint,
     embeddingToken,
     embeddingModel,
@@ -33,6 +34,18 @@ app.post("/api/generate", async (req, res) => {
   try {
     const ragUrl = process.env.RAG_URL || "http://rag:8000/chat/completions";
 
+    const files = Array.isArray(req.files) ? req.files : [];
+    const pdfs = files.map((file) => ({
+      name: file.originalname,
+      content_b64: file.buffer.toString("base64"),
+    }));
+
+    const toNumber = (value) => {
+      if (value === undefined || value === null || value === "") return undefined;
+      const n = Number(value);
+      return Number.isNaN(n) ? undefined : n;
+    };
+
     const body = {
       model: llmModel || model || "default",
       messages: [
@@ -41,7 +54,7 @@ app.post("/api/generate", async (req, res) => {
       ],
       rag: {
         pdf_url: pdfUrl || process.env.RAG_PDF_URL || "",
-        pdf_path: pdfPath || process.env.RAG_PDF_PATH || "",
+        pdfs,
         embedding: {
           endpoint: embeddingEndpoint || process.env.RAG_EMBEDDING_ENDPOINT || "",
           token: embeddingToken || process.env.RAG_EMBEDDING_TOKEN || "",
@@ -52,9 +65,9 @@ app.post("/api/generate", async (req, res) => {
           token: llmToken || apiKey || process.env.RAG_LLM_TOKEN || "",
           model: llmModel || model || process.env.RAG_LLM_MODEL || "default",
         },
-        chunk_size: chunkSize,
-        chunk_overlap: chunkOverlap,
-        top_k: topK,
+        chunk_size: toNumber(chunkSize),
+        chunk_overlap: toNumber(chunkOverlap),
+        top_k: toNumber(topK),
       },
     };
 

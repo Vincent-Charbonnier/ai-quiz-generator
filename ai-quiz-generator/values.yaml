@@ -1,6 +1,7 @@
 replicaCount:
   frontend: 1
   backend: 1
+  rag: 1
 
 image:
   frontend:
@@ -9,6 +10,10 @@ image:
     pullPolicy: IfNotPresent
   backend:
     repository: vinchar/ai-quiz-generator-backend
+    tag: "0.1"
+    pullPolicy: IfNotPresent
+  rag:
+    repository: vinchar/ai-quiz-generator-rag
     tag: "0.1"
     pullPolicy: IfNotPresent
 
@@ -22,12 +27,31 @@ service:
     name: backend
     type: ClusterIP
     port: 3001
+  rag:
+    name: rag
+    type: ClusterIP
+    port: 8000
+
+ragConfig:
+  pdfUrl: ""
+  embeddingEndpoint: ""
+  embeddingToken: ""
+  embeddingModel: "nvidia/nv-embedqa-e5-v5"
+  llmEndpoint: ""
+  llmToken: ""
+  llmModel: "openai/gpt-oss-120b"
+  chunkSize: 512
+  chunkOverlap: 64
+  topK: 6
 
 resources:
   frontend:
     limits: {}
     requests: {}
   backend:
+    limits: {}
+    requests: {}
+  rag:
     limits: {}
     requests: {}
 
@@ -50,6 +74,13 @@ readinessProbe:
     timeoutSeconds: 5
     failureThreshold: 3
     successThreshold: 1
+  rag:
+    path: "/healthz"
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
 
 livenessProbe:
   frontend:
@@ -61,6 +92,13 @@ livenessProbe:
     successThreshold: 1
   backend:
     path: "/api/generate"
+    initialDelaySeconds: 30
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  rag:
+    path: "/healthz"
     initialDelaySeconds: 30
     periodSeconds: 20
     timeoutSeconds: 5

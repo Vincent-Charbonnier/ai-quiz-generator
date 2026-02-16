@@ -29,3 +29,11 @@ services:
       dockerfile: Dockerfile.rag
     ports:
       - "8000:8000"
+    environment:
+      RAG_CHROMA_URL: "https://chroma-db.pcaidev.ai.greendatacenter.com"
+      RAG_CHROMA_SSL_VERIFY: "false"
+    volumes:
+      - rag_chroma:/data/chroma
+
+volumes:
+  rag_chroma:

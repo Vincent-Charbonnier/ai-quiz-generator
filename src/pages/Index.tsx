@@ -20,27 +20,53 @@ const Index = () => {
         ? "/api/generate"
         : "http://localhost:3001/api/generate";
 
+      const hasFiles = (config.pdfFiles || []).length > 0;
+      const body = hasFiles ? new FormData() : null;
+
+      if (hasFiles && body) {
+        for (const file of config.pdfFiles || []) {
+          body.append("files", file);
+        }
+        body.append("endpoint", config.endpoint || "");
+        body.append("apiKey", config.apiKey || "");
+        body.append("model", config.model || "");
+        body.append("systemPrompt", SYSTEM_PROMPT);
+        body.append(
+          "userPrompt",
+          `Generate exactly ${config.numQuestions} multiple-choice questions.`,
+        );
+        body.append("embeddingEndpoint", config.embeddingEndpoint || "");
+        body.append("embeddingToken", config.embeddingToken || "");
+        body.append("embeddingModel", config.embeddingModel || "");
+        body.append("llmEndpoint", config.llmEndpoint || "");
+        body.append("llmToken", config.llmToken || "");
+        body.append("llmModel", config.llmModel || "");
+        body.append("chunkSize", String(config.chunkSize ?? ""));
+        body.append("chunkOverlap", String(config.chunkOverlap ?? ""));
+        body.append("topK", String(config.topK ?? ""));
+      }
+
       const res = await fetch(backendUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint: config.endpoint,
-          apiKey: config.apiKey,
-          model: config.model,
-          systemPrompt: SYSTEM_PROMPT,
-          userPrompt: `Generate exactly ${config.numQuestions} multiple-choice questions.`,
-          pdfUrl: config.pdfUrl,
-          pdfPath: config.pdfPath,
-          embeddingEndpoint: config.embeddingEndpoint,
-          embeddingToken: config.embeddingToken,
-          embeddingModel: config.embeddingModel,
-          llmEndpoint: config.llmEndpoint,
-          llmToken: config.llmToken,
-          llmModel: config.llmModel,
-          chunkSize: config.chunkSize,
-          chunkOverlap: config.chunkOverlap,
-          topK: config.topK,
-        }),
+        headers: hasFiles ? undefined : { "Content-Type": "application/json" },
+        body: hasFiles
+          ? body
+          : JSON.stringify({
+              endpoint: config.endpoint,
+              apiKey: config.apiKey,
+              model: config.model,
+              systemPrompt: SYSTEM_PROMPT,
+              userPrompt: `Generate exactly ${config.numQuestions} multiple-choice questions.`,
+              embeddingEndpoint: config.embeddingEndpoint,
+              embeddingToken: config.embeddingToken,
+              embeddingModel: config.embeddingModel,
+              llmEndpoint: config.llmEndpoint,
+              llmToken: config.llmToken,
+              llmModel: config.llmModel,
+              chunkSize: config.chunkSize,
+              chunkOverlap: config.chunkOverlap,
+              topK: config.topK,
+            }),
       });
 
       if (!res.ok) {
