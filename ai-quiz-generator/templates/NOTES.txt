@@ -14,6 +14,9 @@ Keep the rag service name as "rag" unless you change RAG_URL.
 PDF SOURCE:
 - For runtime uploads, users upload PDFs in the UI (recommended).
 - For fixed documents, set ragConfig.pdfUrl in values to a hosted PDF.
+CHROMA:
+- To use an external Chroma server, set ragConfig.chromaUrl (e.g. http://chroma-db.svc.cluster.local:8000).
+- Set ragConfig.chromaSslVerify to "false" if the server uses an untrusted certificate.
 
 Install the chart:
   helm install ai-quiz-generator ./ai-quiz-generator
