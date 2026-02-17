@@ -15,6 +15,7 @@ spec:
     - match:
         - uri:
             prefix: /
+      timeout: {{ .Values.ezua.virtualService.timeout | quote }}
       rewrite:
         uri: /
       route:

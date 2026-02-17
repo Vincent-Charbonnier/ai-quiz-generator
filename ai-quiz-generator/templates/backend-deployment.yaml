@@ -38,6 +38,8 @@ spec:
           env:
             - name: RAG_URL
               value: "http://{{ .Values.service.rag.name }}:{{ .Values.service.rag.port }}/chat/completions"
+            - name: CONFIG_PATH
+              value: {{ .Values.backend.configPath | quote }}
           envFrom:
             - configMapRef:
                 name: {{ include "ai-quiz-generator.configMapName" . }}
@@ -63,3 +65,14 @@ spec:
             successThreshold: {{ .Values.livenessProbe.backend.successThreshold }}
           resources:
             {{- toYaml .Values.resources.backend | nindent 12 }}
+          {{- if .Values.backend.persistence.enabled }}
+          volumeMounts:
+            - name: backend-config
+              mountPath: {{ .Values.backend.persistence.mountPath | quote }}
+          {{- end }}
+      {{- if .Values.backend.persistence.enabled }}
+      volumes:
+        - name: backend-config
+          persistentVolumeClaim:
+            claimName: {{ include "ai-quiz-generator.fullname" . }}-backend-config
+      {{- end }}

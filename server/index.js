@@ -1,15 +1,48 @@
 import express from "express";
 import cors from "cors";
 import multer from "multer";
+import { promises as fs } from "fs";
+import path from "path";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 const upload = multer({ storage: multer.memoryStorage() });
+const CONFIG_PATH = process.env.CONFIG_PATH || "/data/quiz-config.json";
+
+const ensureConfigDir = async () => {
+  const dir = path.dirname(CONFIG_PATH);
+  await fs.mkdir(dir, { recursive: true });
+};
 
 // Health check endpoint for K8s probes
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
+});
+
+app.get("/api/config", async (req, res) => {
+  try {
+    const raw = await fs.readFile(CONFIG_PATH, "utf8");
+    return res.json(JSON.parse(raw));
+  } catch (err) {
+    if (err.code === "ENOENT") {
+      return res.status(204).end();
+    }
+    console.error("Config read error:", err);
+    return res.status(500).json({ error: "Failed to read config" });
+  }
+});
+
+app.post("/api/config", async (req, res) => {
+  try {
+    await ensureConfigDir();
+    const body = req.body || {};
+    await fs.writeFile(CONFIG_PATH, JSON.stringify(body, null, 2), "utf8");
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("Config write error:", err);
+    return res.status(500).json({ error: "Failed to save config" });
+  }
 });
 
 app.post("/api/generate", upload.array("files"), async (req, res) => {

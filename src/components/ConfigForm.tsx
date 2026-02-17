@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,20 +11,45 @@ import { Settings2, Zap } from "lucide-react";
 interface ConfigFormProps {
   onGenerate: (config: QuizConfig) => void;
   loading: boolean;
+  initialConfig?: Partial<QuizConfig>;
 }
 
-const ConfigForm = ({ onGenerate, loading }: ConfigFormProps) => {
+const ConfigForm = ({ onGenerate, loading, initialConfig }: ConfigFormProps) => {
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
-  const [embeddingEndpoint, setEmbeddingEndpoint] = useState("");
-  const [embeddingToken, setEmbeddingToken] = useState("");
-  const [embeddingModel, setEmbeddingModel] = useState("nvidia/nv-embedqa-e5-v5");
-  const [llmEndpoint, setLlmEndpoint] = useState("");
-  const [llmToken, setLlmToken] = useState("");
-  const [llmModel, setLlmModel] = useState("openai/gpt-oss-120b");
-  const [chunkSize, setChunkSize] = useState(512);
-  const [chunkOverlap, setChunkOverlap] = useState(64);
-  const [topK, setTopK] = useState(6);
-  const [numQuestions, setNumQuestions] = useState(5);
+  const [embeddingEndpoint, setEmbeddingEndpoint] = useState(
+    initialConfig?.embeddingEndpoint ?? "",
+  );
+  const [embeddingToken, setEmbeddingToken] = useState(
+    initialConfig?.embeddingToken ?? "",
+  );
+  const [embeddingModel, setEmbeddingModel] = useState(
+    initialConfig?.embeddingModel ?? "nvidia/nv-embedqa-e5-v5",
+  );
+  const [llmEndpoint, setLlmEndpoint] = useState(initialConfig?.llmEndpoint ?? "");
+  const [llmToken, setLlmToken] = useState(initialConfig?.llmToken ?? "");
+  const [llmModel, setLlmModel] = useState(
+    initialConfig?.llmModel ?? "openai/gpt-oss-120b",
+  );
+  const [chunkSize, setChunkSize] = useState(initialConfig?.chunkSize ?? 512);
+  const [chunkOverlap, setChunkOverlap] = useState(initialConfig?.chunkOverlap ?? 64);
+  const [topK, setTopK] = useState(initialConfig?.topK ?? 6);
+  const [numQuestions, setNumQuestions] = useState(initialConfig?.numQuestions ?? 5);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    if (initialized || !initialConfig) return;
+    setEmbeddingEndpoint(initialConfig.embeddingEndpoint ?? "");
+    setEmbeddingToken(initialConfig.embeddingToken ?? "");
+    setEmbeddingModel(initialConfig.embeddingModel ?? "nvidia/nv-embedqa-e5-v5");
+    setLlmEndpoint(initialConfig.llmEndpoint ?? "");
+    setLlmToken(initialConfig.llmToken ?? "");
+    setLlmModel(initialConfig.llmModel ?? "openai/gpt-oss-120b");
+    setChunkSize(initialConfig.chunkSize ?? 512);
+    setChunkOverlap(initialConfig.chunkOverlap ?? 64);
+    setTopK(initialConfig.topK ?? 6);
+    setNumQuestions(initialConfig.numQuestions ?? 5);
+    setInitialized(true);
+  }, [initialConfig, initialized]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

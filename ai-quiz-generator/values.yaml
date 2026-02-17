@@ -17,6 +17,37 @@ image:
     tag: "0.2"
     pullPolicy: IfNotPresent
 
+frontend:
+  nginx:
+    enabled: true
+    config: |
+      server {
+          listen 80;
+          root /usr/share/nginx/html;
+          index index.html;
+
+          client_max_body_size 50m;
+
+          location /api/ {
+              proxy_pass http://backend:3001;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_read_timeout 300s;
+              proxy_send_timeout 300s;
+              proxy_connect_timeout 60s;
+          }
+
+          location /health {
+              proxy_pass http://backend:3001/health;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+          }
+
+          location / {
+              try_files $uri $uri/ /index.html;
+          }
+      }
+
 service:
   frontend:
     type: ClusterIP
@@ -34,16 +65,16 @@ service:
 
 ragConfig:
   pdfUrl: ""
-  embeddingEndpoint: ""
+  embeddingEndpoint: "https://nv-embedqa-e5-v5.vincent-charbon-8e171347.serving.pcaidev.ai.greendatacenter.com/v1"
   embeddingToken: ""
   embeddingModel: "nvidia/nv-embedqa-e5-v5"
-  llmEndpoint: ""
+  llmEndpoint: "https://gpt-oss-120b.project-user-claudio-luethi.serving.pcaidev.ai.greendatacenter.com/v1"
   llmToken: ""
   llmModel: "openai/gpt-oss-120b"
   chunkSize: 512
   chunkOverlap: 64
   topK: 6
-  chromaUrl: ""
+  chromaUrl: "http://chroma-db-service.chroma.svc.cluster.local:8000"
   chromaSslVerify: "true"
 
 configMap:
@@ -62,8 +93,22 @@ resources:
     limits: {}
     requests: {}
   rag:
-    limits: {}
-    requests: {}
+    limits:
+      cpu: "2"
+      memory: "16Gi"
+    requests:
+      cpu: "1"
+      memory: "8Gi"
+
+backend:
+  configPath: "/data/quiz-config.json"
+  persistence:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    storageClassName: ""
+    mountPath: "/data"
 
 nodeSelector: {}
 tolerations: []
@@ -86,9 +131,9 @@ readinessProbe:
     successThreshold: 1
   rag:
     path: "/healthz"
-    initialDelaySeconds: 5
-    periodSeconds: 10
-    timeoutSeconds: 5
+    initialDelaySeconds: 20
+    periodSeconds: 15
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 
@@ -109,9 +154,9 @@ livenessProbe:
     successThreshold: 1
   rag:
     path: "/healthz"
-    initialDelaySeconds: 30
-    periodSeconds: 20
-    timeoutSeconds: 5
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 
@@ -131,3 +176,4 @@ ezua:
     endpoint: "ai-quiz.${DOMAIN_NAME}"
     domain: "${DOMAIN_NAME}"
     istioGateway: "istio-system/ezaf-gateway"
+    timeout: "300s"
