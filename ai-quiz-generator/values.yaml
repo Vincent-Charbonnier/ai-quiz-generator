@@ -14,7 +14,7 @@ image:
     pullPolicy: IfNotPresent
   rag:
     repository: vinchar/ai-quiz-generator-rag
-    tag: "0.2"
+    tag: "0.3"
     pullPolicy: IfNotPresent
 
 frontend:

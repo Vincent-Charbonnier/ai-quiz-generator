@@ -187,8 +187,23 @@ def _build_vectorstore(
     )
     chunks = splitter.split_documents(documents)
 
+    # Explicitly compute embeddings to avoid server-side embedding requirements.
+    texts: list[str] = []
+    metadatas: list[dict] = []
+    vectors: list[list[float]] = []
     for doc in chunks:
-        vectorstore.add_documents([doc])
+        try:
+            embedded = embeddings.embed_documents([doc.page_content])
+        except Exception:
+            continue
+        if not embedded:
+            continue
+        texts.append(doc.page_content)
+        metadatas.append(doc.metadata or {})
+        vectors.append(embedded[0])
+
+    if texts:
+        vectorstore.add_texts(texts, metadatas=metadatas, embeddings=vectors)
 
     return vectorstore
 

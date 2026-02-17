@@ -2,7 +2,7 @@ import os
 import shutil
 
 chart_name = "ai-quiz-generator"
-chart_version = "0.1.7"
+chart_version = "0.1.8"
 base_dir = f"./{chart_name}"
 templates_dir = os.path.join(base_dir, "templates")
 
@@ -51,7 +51,7 @@ image:
     pullPolicy: IfNotPresent
   rag:
     repository: vinchar/ai-quiz-generator-rag
-    tag: "0.2"
+    tag: "0.3"
     pullPolicy: IfNotPresent
 
 frontend:
