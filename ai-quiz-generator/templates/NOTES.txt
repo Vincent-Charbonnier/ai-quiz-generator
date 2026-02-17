@@ -21,6 +21,7 @@ CHROMA:
 CONFIG:
 - By default, a ConfigMap and Secret are created from values.yaml and mounted as env vars in backend and rag.
 - For existing resources, set configMap.name / secret.name and set create=false.
+- The backend can persist the last-used config to a PVC. See backend.persistence in values.yaml.
 
 Install the chart:
   helm install ai-quiz-generator ./ai-quiz-generator

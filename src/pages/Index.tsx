@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ConfigForm from "@/components/ConfigForm";
 import QuizView from "@/components/QuizView";
 import type { QuizConfig, QuizQuestion } from "@/types/quiz";
@@ -12,46 +12,16 @@ Each question must have exactly 4 options. correctIndex is 0-based.`;
 const Index = () => {
   const [questions, setQuestions] = useState<QuizQuestion[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [savedConfig, setSavedConfig] = useState<Partial<QuizConfig> | null>(null);
 
   const backendBaseUrl = useMemo(
     () => (import.meta.env.PROD ? "" : "http://localhost:3001"),
     [],
   );
 
-  useEffect(() => {
-    const loadConfig = async () => {
-      try {
-        const res = await fetch(`${backendBaseUrl}/api/config`);
-        if (!res.ok) return;
-        const data = await res.json();
-        setSavedConfig(data);
-      } catch {
-        // Ignore config load errors to avoid blocking the UI.
-      }
-    };
-    loadConfig();
-  }, [backendBaseUrl]);
-
-  const persistConfig = async (config: QuizConfig) => {
-    const { pdfFiles, ...persistable } = config;
-    setSavedConfig(persistable);
-    try {
-      await fetch(`${backendBaseUrl}/api/config`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(persistable),
-      });
-    } catch {
-      // Ignore persistence errors to avoid blocking quiz generation.
-    }
-  };
-
   const handleGenerate = async (config: QuizConfig) => {
     setLoading(true);
     try {
       const backendUrl = `${backendBaseUrl}/api/generate`;
-      await persistConfig(config);
 
       const hasFiles = (config.pdfFiles || []).length > 0;
       const body = hasFiles ? new FormData() : null;
@@ -125,11 +95,7 @@ const Index = () => {
       {questions ? (
         <QuizView questions={questions} onReset={() => setQuestions(null)} />
       ) : (
-        <ConfigForm
-          onGenerate={handleGenerate}
-          loading={loading}
-          initialConfig={savedConfig ?? undefined}
-        />
+        <ConfigForm onGenerate={handleGenerate} loading={loading} />
       )}
     </div>
   );

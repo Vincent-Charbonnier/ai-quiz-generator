@@ -2,7 +2,7 @@ import os
 import shutil
 
 chart_name = "ai-quiz-generator"
-chart_version = "0.1.5"
+chart_version = "0.1.7"
 base_dir = f"./{chart_name}"
 templates_dir = os.path.join(base_dir, "templates")
 
@@ -43,16 +43,47 @@ replicaCount:
 image:
   frontend:
     repository: vinchar/ai-quiz-generator-frontend
-    tag: "0.2"
+    tag: "0.4"
     pullPolicy: IfNotPresent
   backend:
     repository: vinchar/ai-quiz-generator-backend
-    tag: "0.2"
+    tag: "0.3"
     pullPolicy: IfNotPresent
   rag:
     repository: vinchar/ai-quiz-generator-rag
     tag: "0.2"
     pullPolicy: IfNotPresent
+
+frontend:
+  nginx:
+    enabled: true
+    config: |
+      server {
+          listen 80;
+          root /usr/share/nginx/html;
+          index index.html;
+
+          client_max_body_size 50m;
+
+          location /api/ {
+              proxy_pass http://backend:3001;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_read_timeout 300s;
+              proxy_send_timeout 300s;
+              proxy_connect_timeout 60s;
+          }
+
+          location /health {
+              proxy_pass http://backend:3001/health;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+          }
+
+          location / {
+              try_files $uri $uri/ /index.html;
+          }
+      }
 
 service:
   frontend:
@@ -71,16 +102,16 @@ service:
 
 ragConfig:
   pdfUrl: ""
-  embeddingEndpoint: ""
+  embeddingEndpoint: "https://nv-embedqa-e5-v5.vincent-charbon-8e171347.serving.pcaidev.ai.greendatacenter.com/v1"
   embeddingToken: ""
   embeddingModel: "nvidia/nv-embedqa-e5-v5"
-  llmEndpoint: ""
+  llmEndpoint: "https://gpt-oss-120b.project-user-claudio-luethi.serving.pcaidev.ai.greendatacenter.com/v1"
   llmToken: ""
   llmModel: "openai/gpt-oss-120b"
   chunkSize: 512
   chunkOverlap: 64
   topK: 6
-  chromaUrl: ""
+  chromaUrl: "http://chroma-db-service.chroma.svc.cluster.local:8000"
   chromaSslVerify: "true"
 
 configMap:
@@ -99,8 +130,22 @@ resources:
     limits: {}
     requests: {}
   rag:
-    limits: {}
-    requests: {}
+    limits:
+      cpu: "2"
+      memory: "16Gi"
+    requests:
+      cpu: "1"
+      memory: "8Gi"
+
+backend:
+  configPath: "/data/quiz-config.json"
+  persistence:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    size: 1Gi
+    storageClassName: ""
+    mountPath: "/data"
 
 nodeSelector: {}
 tolerations: []
@@ -123,9 +168,9 @@ readinessProbe:
     successThreshold: 1
   rag:
     path: "/healthz"
-    initialDelaySeconds: 5
-    periodSeconds: 10
-    timeoutSeconds: 5
+    initialDelaySeconds: 20
+    periodSeconds: 15
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 
@@ -146,9 +191,9 @@ livenessProbe:
     successThreshold: 1
   rag:
     path: "/healthz"
-    initialDelaySeconds: 30
-    periodSeconds: 20
-    timeoutSeconds: 5
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
     failureThreshold: 3
     successThreshold: 1
 
@@ -168,6 +213,7 @@ ezua:
     endpoint: "ai-quiz.${DOMAIN_NAME}"
     domain: "${DOMAIN_NAME}"
     istioGateway: "istio-system/ezaf-gateway"
+    timeout: "300s"
 """
 with open(os.path.join(base_dir, "values.yaml"), "w") as f:
     f.write(values_yaml)
@@ -214,6 +260,12 @@ spec:
           imagePullPolicy: {{ .Values.image.frontend.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.frontend.port }}
+          {{- if .Values.frontend.nginx.enabled }}
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+          {{- end }}
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.frontend.path | quote }}
@@ -234,6 +286,12 @@ spec:
             successThreshold: {{ .Values.livenessProbe.frontend.successThreshold }}
           resources:
             {{- toYaml .Values.resources.frontend | nindent 12 }}
+      {{- if .Values.frontend.nginx.enabled }}
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: {{ include "ai-quiz-generator.fullname" . }}-nginx
+      {{- end }}
 """
 with open(os.path.join(templates_dir, "frontend-deployment.yaml"), "w") as f:
     f.write(frontend_deployment_yaml)
@@ -283,6 +341,8 @@ spec:
           env:
             - name: RAG_URL
               value: "http://{{ .Values.service.rag.name }}:{{ .Values.service.rag.port }}/chat/completions"
+            - name: CONFIG_PATH
+              value: {{ .Values.backend.configPath | quote }}
           envFrom:
             - configMapRef:
                 name: {{ include "ai-quiz-generator.configMapName" . }}
@@ -308,6 +368,17 @@ spec:
             successThreshold: {{ .Values.livenessProbe.backend.successThreshold }}
           resources:
             {{- toYaml .Values.resources.backend | nindent 12 }}
+          {{- if .Values.backend.persistence.enabled }}
+          volumeMounts:
+            - name: backend-config
+              mountPath: {{ .Values.backend.persistence.mountPath | quote }}
+          {{- end }}
+      {{- if .Values.backend.persistence.enabled }}
+      volumes:
+        - name: backend-config
+          persistentVolumeClaim:
+            claimName: {{ include "ai-quiz-generator.fullname" . }}-backend-config
+      {{- end }}
 """
 with open(os.path.join(templates_dir, "backend-deployment.yaml"), "w") as f:
     f.write(backend_deployment_yaml)
@@ -508,6 +579,56 @@ with open(os.path.join(templates_dir, "secret.yaml"), "w") as f:
     f.write(secret_yaml)
 
 # ---------------------------
+# Frontend Nginx ConfigMap
+# ---------------------------
+print("Writing frontend-nginx-configmap.yaml...")
+frontend_nginx_configmap_yaml = """\
+{{- if .Values.frontend.nginx.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-quiz-generator.fullname" . }}-nginx
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+data:
+  default.conf: |
+{{ .Values.frontend.nginx.config | nindent 4 }}
+{{- end }}
+"""
+with open(os.path.join(templates_dir, "frontend-nginx-configmap.yaml"), "w") as f:
+    f.write(frontend_nginx_configmap_yaml)
+
+# ---------------------------
+# Backend PVC
+# ---------------------------
+print("Writing backend-pvc.yaml...")
+backend_pvc_yaml = """\
+{{- if .Values.backend.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ai-quiz-generator.fullname" . }}-backend-config
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  accessModes:
+{{- range .Values.backend.persistence.accessModes }}
+    - {{ . | quote }}
+{{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.size | quote }}
+  {{- if .Values.backend.persistence.storageClassName }}
+  storageClassName: {{ .Values.backend.persistence.storageClassName | quote }}
+  {{- end }}
+{{- end }}
+"""
+with open(os.path.join(templates_dir, "backend-pvc.yaml"), "w") as f:
+    f.write(backend_pvc_yaml)
+
+# ---------------------------
 # HorizontalPodAutoscaler (optional)
 # ---------------------------
 print("Writing hpa.yaml...")
@@ -558,6 +679,7 @@ spec:
     - match:
         - uri:
             prefix: /
+      timeout: {{ .Values.ezua.virtualService.timeout | quote }}
       rewrite:
         uri: /
       route:
@@ -597,6 +719,7 @@ CHROMA:
 CONFIG:
 - By default, a ConfigMap and Secret are created from values.yaml and mounted as env vars in backend and rag.
 - For existing resources, set configMap.name / secret.name and set create=false.
+- The backend can persist the last-used config to a PVC. See backend.persistence in values.yaml.
 
 Install the chart:
   helm install ai-quiz-generator ./ai-quiz-generator

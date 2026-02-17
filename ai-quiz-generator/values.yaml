@@ -6,11 +6,11 @@ replicaCount:
 image:
   frontend:
     repository: vinchar/ai-quiz-generator-frontend
-    tag: "0.2"
+    tag: "0.4"
     pullPolicy: IfNotPresent
   backend:
     repository: vinchar/ai-quiz-generator-backend
-    tag: "0.2"
+    tag: "0.3"
     pullPolicy: IfNotPresent
   rag:
     repository: vinchar/ai-quiz-generator-rag

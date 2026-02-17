@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,63 +11,17 @@ import { Settings2, Zap } from "lucide-react";
 interface ConfigFormProps {
   onGenerate: (config: QuizConfig) => void;
   loading: boolean;
-  initialConfig?: Partial<QuizConfig>;
 }
 
-const ConfigForm = ({ onGenerate, loading, initialConfig }: ConfigFormProps) => {
+const ConfigForm = ({ onGenerate, loading }: ConfigFormProps) => {
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
-  const [embeddingEndpoint, setEmbeddingEndpoint] = useState(
-    initialConfig?.embeddingEndpoint ?? "",
-  );
-  const [embeddingToken, setEmbeddingToken] = useState(
-    initialConfig?.embeddingToken ?? "",
-  );
-  const [embeddingModel, setEmbeddingModel] = useState(
-    initialConfig?.embeddingModel ?? "nvidia/nv-embedqa-e5-v5",
-  );
-  const [llmEndpoint, setLlmEndpoint] = useState(initialConfig?.llmEndpoint ?? "");
-  const [llmToken, setLlmToken] = useState(initialConfig?.llmToken ?? "");
-  const [llmModel, setLlmModel] = useState(
-    initialConfig?.llmModel ?? "openai/gpt-oss-120b",
-  );
-  const [chunkSize, setChunkSize] = useState(initialConfig?.chunkSize ?? 512);
-  const [chunkOverlap, setChunkOverlap] = useState(initialConfig?.chunkOverlap ?? 64);
-  const [topK, setTopK] = useState(initialConfig?.topK ?? 6);
-  const [numQuestions, setNumQuestions] = useState(initialConfig?.numQuestions ?? 5);
-  const [initialized, setInitialized] = useState(false);
-
-  useEffect(() => {
-    if (initialized || !initialConfig) return;
-    setEmbeddingEndpoint(initialConfig.embeddingEndpoint ?? "");
-    setEmbeddingToken(initialConfig.embeddingToken ?? "");
-    setEmbeddingModel(initialConfig.embeddingModel ?? "nvidia/nv-embedqa-e5-v5");
-    setLlmEndpoint(initialConfig.llmEndpoint ?? "");
-    setLlmToken(initialConfig.llmToken ?? "");
-    setLlmModel(initialConfig.llmModel ?? "openai/gpt-oss-120b");
-    setChunkSize(initialConfig.chunkSize ?? 512);
-    setChunkOverlap(initialConfig.chunkOverlap ?? 64);
-    setTopK(initialConfig.topK ?? 6);
-    setNumQuestions(initialConfig.numQuestions ?? 5);
-    setInitialized(true);
-  }, [initialConfig, initialized]);
+  const [numQuestions, setNumQuestions] = useState(5);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onGenerate({
-      endpoint: llmEndpoint,
-      apiKey: llmToken,
-      model: llmModel,
       numQuestions,
       pdfFiles,
-      embeddingEndpoint,
-      embeddingToken,
-      embeddingModel,
-      llmEndpoint,
-      llmToken,
-      llmModel,
-      chunkSize,
-      chunkOverlap,
-      topK,
     });
   };
 
@@ -94,71 +48,6 @@ const ConfigForm = ({ onGenerate, loading, initialConfig }: ConfigFormProps) => 
                   multiple
                   accept="application/pdf"
                   onChange={(e) => setPdfFiles(Array.from(e.target.files || []))}
-                />
-                <Label htmlFor="embeddingEndpoint">Embedding Endpoint</Label>
-                <Input
-                  id="embeddingEndpoint"
-                  placeholder="https://.../v1"
-                  value={embeddingEndpoint}
-                  onChange={(e) => setEmbeddingEndpoint(e.target.value)}
-                />
-                <Label htmlFor="embeddingToken">Embedding Token</Label>
-                <Input
-                  id="embeddingToken"
-                  type="password"
-                  placeholder="token"
-                  value={embeddingToken}
-                  onChange={(e) => setEmbeddingToken(e.target.value)}
-                />
-                <Label htmlFor="embeddingModel">Embedding Model</Label>
-                <Input
-                  id="embeddingModel"
-                  placeholder="nvidia/nv-embedqa-e5-v5"
-                  value={embeddingModel}
-                  onChange={(e) => setEmbeddingModel(e.target.value)}
-                />
-                <Label htmlFor="llmEndpoint">LLM Endpoint</Label>
-                <Input
-                  id="llmEndpoint"
-                  placeholder="https://.../v1"
-                  value={llmEndpoint}
-                  onChange={(e) => setLlmEndpoint(e.target.value)}
-                />
-                <Label htmlFor="llmToken">LLM Token</Label>
-                <Input
-                  id="llmToken"
-                  type="password"
-                  placeholder="token"
-                  value={llmToken}
-                  onChange={(e) => setLlmToken(e.target.value)}
-                />
-                <Label htmlFor="llmModel">LLM Model</Label>
-                <Input
-                  id="llmModel"
-                  placeholder="openai/gpt-oss-120b"
-                  value={llmModel}
-                  onChange={(e) => setLlmModel(e.target.value)}
-                />
-                <Label htmlFor="chunkSize">Chunk Size</Label>
-                <Input
-                  id="chunkSize"
-                  type="number"
-                  value={chunkSize}
-                  onChange={(e) => setChunkSize(Number(e.target.value))}
-                />
-                <Label htmlFor="chunkOverlap">Chunk Overlap</Label>
-                <Input
-                  id="chunkOverlap"
-                  type="number"
-                  value={chunkOverlap}
-                  onChange={(e) => setChunkOverlap(Number(e.target.value))}
-                />
-                <Label htmlFor="topK">Top K</Label>
-                <Input
-                  id="topK"
-                  type="number"
-                  value={topK}
-                  onChange={(e) => setTopK(Number(e.target.value))}
                 />
               </div>
             </PopoverContent>
