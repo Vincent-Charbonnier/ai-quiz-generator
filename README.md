@@ -1,73 +1,106 @@
-# Welcome to your Lovable project
+# AI Quiz Generator for HPE Private Cloud AI
 
-## Project info
+AI Quiz Generator is a lightweight web UI that creates multiple‑choice quizzes from uploaded PDFs using a RAG pipeline.  
+It is designed for deployment inside HPE Private Cloud AI via Helm charts, and can also run locally with Docker.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+## Overview
 
-There are several ways of editing your application.
+The application provides:
 
-**Use Lovable**
+- PDF upload (one or more files)
+- RAG‑based question generation
+- Multiple‑choice quiz UI with scoring
+- Configurable embedding + LLM endpoints (OpenAI‑compatible)
+- Production‑ready Docker images and Helm chart deployment
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## Architecture
 
-**Use your preferred IDE**
+- Frontend: React + Vite + Tailwind
+- Backend: Node/Express API
+- RAG: FastAPI + LangChain + Chroma
+- Optional external Chroma inside the cluster
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Deployment on HPE Private Cloud AI
 
-Follow these steps:
+This repo includes everything needed to deploy as a framework in HPE Private Cloud AI.
+
+### Deployment steps
+
+1. Open the AI Essentials interface.
+1. Select "Import New Framework".
+1. Upload the Helm chart file:
+   `ai-quiz-generator-x.y.z.tgz`
+1. Deploy the framework.
+1. Set the runtime configuration in `values.yaml` (RAG endpoints and tokens).
+
+Configuration is **not** entered in the UI.  
+The UI only handles PDF uploads and quiz options.
+
+---
+
+## Configuration (values.yaml)
+
+All runtime configuration is provided through the Helm chart values.
+
+### Key fields
+
+| Field | Description |
+|---|---|
+| `ragConfig.embeddingEndpoint` | Embedding API base URL (`/v1`) |
+| `ragConfig.embeddingToken` | Embedding API token (optional) |
+| `ragConfig.embeddingModel` | Embedding model name |
+| `ragConfig.llmEndpoint` | LLM API base URL (`/v1`) |
+| `ragConfig.llmToken` | LLM API token (optional) |
+| `ragConfig.llmModel` | LLM model name |
+| `ragConfig.chromaUrl` | External Chroma URL (recommended for persistence) |
+| `ragConfig.chunkSize` | RAG chunk size |
+| `ragConfig.chunkOverlap` | RAG chunk overlap |
+| `ragConfig.topK` | Retrieval count |
+
+Tokens are stored in a Kubernetes Secret created by the chart.
+
+---
+
+## Docker Usage (Optional)
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+docker run -d --name ai-quiz-frontend -p 3000:80 --restart unless-stopped vinchar/ai-quiz-generator-frontend:<tag>
+docker run -d --name ai-quiz-backend -p 3001:3001 --restart unless-stopped vinchar/ai-quiz-generator-backend:<tag>
+docker run -d --name ai-quiz-rag -p 8000:8000 --restart unless-stopped vinchar/ai-quiz-generator-rag:<tag>
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Repository Structure
 
-**Use GitHub Codespaces**
+| File/Folder | Description |
+|---|---|
+| `Dockerfile.frontend` | Frontend build + nginx runtime image |
+| `Dockerfile.backend` | Node/Express backend |
+| `Dockerfile.rag` | FastAPI RAG service |
+| `ai-quiz-generator/` | Helm chart templates + values |
+| `ai-quiz-generator-*.tgz` | Packaged Helm chart |
+| `src/` | React frontend source |
+| `server/` | Express backend |
+| `rag/` | FastAPI RAG service |
+| `k8s/` | Optional raw manifests |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## Troubleshooting
 
-This project is built with:
+### 500 Internal Server Error on `/api/generate`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- Check RAG logs for Chroma connectivity or embedding errors.
+- Verify `ragConfig.*` endpoints and tokens in `values.yaml`.
 
-## How can I deploy this project?
+### Upload failures
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- Ensure nginx proxy limits and timeouts are configured in the Helm chart.
+- Verify Istio VirtualService timeout if using the provided template.
