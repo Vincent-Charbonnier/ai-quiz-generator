@@ -6,7 +6,7 @@ replicaCount:
 image:
   frontend:
     repository: vinchar/ai-quiz-generator-frontend
-    tag: "0.4"
+    tag: "0.5"
     pullPolicy: IfNotPresent
   backend:
     repository: vinchar/ai-quiz-generator-backend

@@ -2,7 +2,7 @@ import os
 import shutil
 
 chart_name = "ai-quiz-generator"
-chart_version = "0.1.8"
+chart_version = "0.1.9"
 base_dir = f"./{chart_name}"
 templates_dir = os.path.join(base_dir, "templates")
 
@@ -43,7 +43,7 @@ replicaCount:
 image:
   frontend:
     repository: vinchar/ai-quiz-generator-frontend
-    tag: "0.4"
+    tag: "0.5"
     pullPolicy: IfNotPresent
   backend:
     repository: vinchar/ai-quiz-generator-backend
