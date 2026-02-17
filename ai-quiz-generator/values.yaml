@@ -6,15 +6,15 @@ replicaCount:
 image:
   frontend:
     repository: vinchar/ai-quiz-generator-frontend
-    tag: "0.1"
+    tag: "0.2"
     pullPolicy: IfNotPresent
   backend:
     repository: vinchar/ai-quiz-generator-backend
-    tag: "0.1"
+    tag: "0.2"
     pullPolicy: IfNotPresent
   rag:
     repository: vinchar/ai-quiz-generator-rag
-    tag: "0.1"
+    tag: "0.2"
     pullPolicy: IfNotPresent
 
 service:
@@ -45,6 +45,14 @@ ragConfig:
   topK: 6
   chromaUrl: ""
   chromaSslVerify: "true"
+
+configMap:
+  create: true
+  name: ""
+
+secret:
+  create: true
+  name: ""
 
 resources:
   frontend:

@@ -35,31 +35,11 @@ spec:
           imagePullPolicy: {{ .Values.image.rag.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.rag.port }}
-          env:
-            - name: RAG_PDF_URL
-              value: "{{ .Values.ragConfig.pdfUrl }}"
-            - name: RAG_EMBEDDING_ENDPOINT
-              value: "{{ .Values.ragConfig.embeddingEndpoint }}"
-            - name: RAG_EMBEDDING_TOKEN
-              value: "{{ .Values.ragConfig.embeddingToken }}"
-            - name: RAG_EMBEDDING_MODEL
-              value: "{{ .Values.ragConfig.embeddingModel }}"
-            - name: RAG_LLM_ENDPOINT
-              value: "{{ .Values.ragConfig.llmEndpoint }}"
-            - name: RAG_LLM_TOKEN
-              value: "{{ .Values.ragConfig.llmToken }}"
-            - name: RAG_LLM_MODEL
-              value: "{{ .Values.ragConfig.llmModel }}"
-            - name: RAG_CHUNK_SIZE
-              value: "{{ .Values.ragConfig.chunkSize }}"
-            - name: RAG_CHUNK_OVERLAP
-              value: "{{ .Values.ragConfig.chunkOverlap }}"
-            - name: RAG_TOP_K
-              value: "{{ .Values.ragConfig.topK }}"
-            - name: RAG_CHROMA_URL
-              value: "{{ .Values.ragConfig.chromaUrl }}"
-            - name: RAG_CHROMA_SSL_VERIFY
-              value: "{{ .Values.ragConfig.chromaSslVerify }}"
+          envFrom:
+            - configMapRef:
+                name: {{ include "ai-quiz-generator.configMapName" . }}
+            - secretRef:
+                name: {{ include "ai-quiz-generator.secretName" . }}
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.rag.path | quote }}

@@ -18,6 +18,10 @@ CHROMA:
 - To use an external Chroma server, set ragConfig.chromaUrl (e.g. http://chroma-db.svc.cluster.local:8000).
 - Set ragConfig.chromaSslVerify to "false" if the server uses an untrusted certificate.
 
+CONFIG:
+- By default, a ConfigMap and Secret are created from values.yaml and mounted as env vars in backend and rag.
+- For existing resources, set configMap.name / secret.name and set create=false.
+
 Install the chart:
   helm install ai-quiz-generator ./ai-quiz-generator
 

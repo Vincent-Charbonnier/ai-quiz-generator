@@ -2,7 +2,7 @@ import os
 import shutil
 
 chart_name = "ai-quiz-generator"
-chart_version = "0.1.0"
+chart_version = "0.1.5"
 base_dir = f"./{chart_name}"
 templates_dir = os.path.join(base_dir, "templates")
 
@@ -43,15 +43,15 @@ replicaCount:
 image:
   frontend:
     repository: vinchar/ai-quiz-generator-frontend
-    tag: "0.1"
+    tag: "0.2"
     pullPolicy: IfNotPresent
   backend:
     repository: vinchar/ai-quiz-generator-backend
-    tag: "0.1"
+    tag: "0.2"
     pullPolicy: IfNotPresent
   rag:
     repository: vinchar/ai-quiz-generator-rag
-    tag: "0.1"
+    tag: "0.2"
     pullPolicy: IfNotPresent
 
 service:
@@ -82,6 +82,14 @@ ragConfig:
   topK: 6
   chromaUrl: ""
   chromaSslVerify: "true"
+
+configMap:
+  create: true
+  name: ""
+
+secret:
+  create: true
+  name: ""
 
 resources:
   frontend:
@@ -275,30 +283,11 @@ spec:
           env:
             - name: RAG_URL
               value: "http://{{ .Values.service.rag.name }}:{{ .Values.service.rag.port }}/chat/completions"
-            - name: RAG_PDF_URL
-              value: "{{ .Values.ragConfig.pdfUrl }}"
-            - name: RAG_EMBEDDING_ENDPOINT
-              value: "{{ .Values.ragConfig.embeddingEndpoint }}"
-            - name: RAG_EMBEDDING_TOKEN
-              value: "{{ .Values.ragConfig.embeddingToken }}"
-            - name: RAG_EMBEDDING_MODEL
-              value: "{{ .Values.ragConfig.embeddingModel }}"
-            - name: RAG_LLM_ENDPOINT
-              value: "{{ .Values.ragConfig.llmEndpoint }}"
-            - name: RAG_LLM_TOKEN
-              value: "{{ .Values.ragConfig.llmToken }}"
-            - name: RAG_LLM_MODEL
-              value: "{{ .Values.ragConfig.llmModel }}"
-            - name: RAG_CHUNK_SIZE
-              value: "{{ .Values.ragConfig.chunkSize }}"
-            - name: RAG_CHUNK_OVERLAP
-              value: "{{ .Values.ragConfig.chunkOverlap }}"
-            - name: RAG_TOP_K
-              value: "{{ .Values.ragConfig.topK }}"
-            - name: RAG_CHROMA_URL
-              value: "{{ .Values.ragConfig.chromaUrl }}"
-            - name: RAG_CHROMA_SSL_VERIFY
-              value: "{{ .Values.ragConfig.chromaSslVerify }}"
+          envFrom:
+            - configMapRef:
+                name: {{ include "ai-quiz-generator.configMapName" . }}
+            - secretRef:
+                name: {{ include "ai-quiz-generator.secretName" . }}
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.backend.path | quote }}
@@ -365,31 +354,11 @@ spec:
           imagePullPolicy: {{ .Values.image.rag.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.rag.port }}
-          env:
-            - name: RAG_PDF_URL
-              value: "{{ .Values.ragConfig.pdfUrl }}"
-            - name: RAG_EMBEDDING_ENDPOINT
-              value: "{{ .Values.ragConfig.embeddingEndpoint }}"
-            - name: RAG_EMBEDDING_TOKEN
-              value: "{{ .Values.ragConfig.embeddingToken }}"
-            - name: RAG_EMBEDDING_MODEL
-              value: "{{ .Values.ragConfig.embeddingModel }}"
-            - name: RAG_LLM_ENDPOINT
-              value: "{{ .Values.ragConfig.llmEndpoint }}"
-            - name: RAG_LLM_TOKEN
-              value: "{{ .Values.ragConfig.llmToken }}"
-            - name: RAG_LLM_MODEL
-              value: "{{ .Values.ragConfig.llmModel }}"
-            - name: RAG_CHUNK_SIZE
-              value: "{{ .Values.ragConfig.chunkSize }}"
-            - name: RAG_CHUNK_OVERLAP
-              value: "{{ .Values.ragConfig.chunkOverlap }}"
-            - name: RAG_TOP_K
-              value: "{{ .Values.ragConfig.topK }}"
-            - name: RAG_CHROMA_URL
-              value: "{{ .Values.ragConfig.chromaUrl }}"
-            - name: RAG_CHROMA_SSL_VERIFY
-              value: "{{ .Values.ragConfig.chromaSslVerify }}"
+          envFrom:
+            - configMapRef:
+                name: {{ include "ai-quiz-generator.configMapName" . }}
+            - secretRef:
+                name: {{ include "ai-quiz-generator.secretName" . }}
           readinessProbe:
             httpGet:
               path: {{ .Values.readinessProbe.rag.path | quote }}
@@ -493,6 +462,52 @@ with open(os.path.join(templates_dir, "rag-service.yaml"), "w") as f:
     f.write(rag_service_yaml)
 
 # ---------------------------
+# ConfigMap / Secret
+# ---------------------------
+print("Writing configmap.yaml...")
+configmap_yaml = """\
+{{- if .Values.configMap.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-quiz-generator.configMapName" . }}
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+data:
+  RAG_PDF_URL: {{ .Values.ragConfig.pdfUrl | quote }}
+  RAG_EMBEDDING_ENDPOINT: {{ .Values.ragConfig.embeddingEndpoint | quote }}
+  RAG_EMBEDDING_MODEL: {{ .Values.ragConfig.embeddingModel | quote }}
+  RAG_LLM_ENDPOINT: {{ .Values.ragConfig.llmEndpoint | quote }}
+  RAG_LLM_MODEL: {{ .Values.ragConfig.llmModel | quote }}
+  RAG_CHUNK_SIZE: {{ .Values.ragConfig.chunkSize | quote }}
+  RAG_CHUNK_OVERLAP: {{ .Values.ragConfig.chunkOverlap | quote }}
+  RAG_TOP_K: {{ .Values.ragConfig.topK | quote }}
+  RAG_CHROMA_URL: {{ .Values.ragConfig.chromaUrl | quote }}
+  RAG_CHROMA_SSL_VERIFY: {{ .Values.ragConfig.chromaSslVerify | quote }}
+{{- end }}
+"""
+with open(os.path.join(templates_dir, "configmap.yaml"), "w") as f:
+    f.write(configmap_yaml)
+
+print("Writing secret.yaml...")
+secret_yaml = """\
+{{- if .Values.secret.create }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "ai-quiz-generator.secretName" . }}
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  RAG_EMBEDDING_TOKEN: {{ .Values.ragConfig.embeddingToken | quote }}
+  RAG_LLM_TOKEN: {{ .Values.ragConfig.llmToken | quote }}
+{{- end }}
+"""
+with open(os.path.join(templates_dir, "secret.yaml"), "w") as f:
+    f.write(secret_yaml)
+
+# ---------------------------
 # HorizontalPodAutoscaler (optional)
 # ---------------------------
 print("Writing hpa.yaml...")
@@ -579,6 +594,10 @@ CHROMA:
 - To use an external Chroma server, set ragConfig.chromaUrl (e.g. http://chroma-db.svc.cluster.local:8000).
 - Set ragConfig.chromaSslVerify to "false" if the server uses an untrusted certificate.
 
+CONFIG:
+- By default, a ConfigMap and Secret are created from values.yaml and mounted as env vars in backend and rag.
+- For existing resources, set configMap.name / secret.name and set create=false.
+
 Install the chart:
   helm install ai-quiz-generator ./ai-quiz-generator
 
@@ -621,6 +640,28 @@ app.kubernetes.io/name: {{ include "ai-quiz-generator.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/version: {{ .Chart.AppVersion }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+ConfigMap name
+*/}}
+{{- define "ai-quiz-generator.configMapName" -}}
+{{- if .Values.configMap.name -}}
+{{- .Values.configMap.name -}}
+{{- else -}}
+{{ include "ai-quiz-generator.fullname" . }}-config
+{{- end -}}
+{{- end }}
+
+{{/*
+Secret name
+*/}}
+{{- define "ai-quiz-generator.secretName" -}}
+{{- if .Values.secret.name -}}
+{{- .Values.secret.name -}}
+{{- else -}}
+{{ include "ai-quiz-generator.fullname" . }}-secret
+{{- end -}}
 {{- end }}
 """
 with open(os.path.join(templates_dir, "_helpers.tpl"), "w") as f:

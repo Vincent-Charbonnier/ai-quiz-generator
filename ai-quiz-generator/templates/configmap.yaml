@@ -1,0 +1,19 @@
+{{- if .Values.configMap.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-quiz-generator.configMapName" . }}
+  labels:
+    {{- include "ai-quiz-generator.labels" . | nindent 4 }}
+data:
+  RAG_PDF_URL: {{ .Values.ragConfig.pdfUrl | quote }}
+  RAG_EMBEDDING_ENDPOINT: {{ .Values.ragConfig.embeddingEndpoint | quote }}
+  RAG_EMBEDDING_MODEL: {{ .Values.ragConfig.embeddingModel | quote }}
+  RAG_LLM_ENDPOINT: {{ .Values.ragConfig.llmEndpoint | quote }}
+  RAG_LLM_MODEL: {{ .Values.ragConfig.llmModel | quote }}
+  RAG_CHUNK_SIZE: {{ .Values.ragConfig.chunkSize | quote }}
+  RAG_CHUNK_OVERLAP: {{ .Values.ragConfig.chunkOverlap | quote }}
+  RAG_TOP_K: {{ .Values.ragConfig.topK | quote }}
+  RAG_CHROMA_URL: {{ .Values.ragConfig.chromaUrl | quote }}
+  RAG_CHROMA_SSL_VERIFY: {{ .Values.ragConfig.chromaSslVerify | quote }}
+{{- end }}
