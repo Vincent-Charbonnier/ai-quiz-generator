@@ -67,6 +67,12 @@ Tokens are stored in a Kubernetes Secret created by the chart.
 
 ---
 
+## UI Overview
+
+<img width="767" height="402" alt="image" src="https://github.com/user-attachments/assets/88115295-abe5-41b4-b133-a9b2eee3003d" />
+
+---
+
 ## Docker Usage (Optional)
 
 ```sh
